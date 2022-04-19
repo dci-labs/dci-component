@@ -13,12 +13,12 @@ VALID_DCI_TOPICS=(
 )
 
 # API Secrets
-#DCI_CLIENT_ID=${INPUT_DCICLIENTID}
-#DCI_API_SECRET=${INPUT_DCIAPISECRET}
-#DCI_CS_URL=${INPUT_DCICSURL}
-#export DCI_CLIENT_ID
-#export DCI_API_SECRET
-#export DCI_CS_URL
+DCI_CLIENT_ID=${INPUT_DCICLIENTID}
+DCI_API_SECRET=${INPUT_DCIAPISECRET}
+DCI_CS_URL=${INPUT_DCICSURL}
+export DCI_CLIENT_ID
+export DCI_API_SECRET
+export DCI_CS_URL
 
 # Required Inputs
 TOPIC=${INPUT_DCITOPIC^^}
@@ -40,16 +40,14 @@ fi
 
 case ${TOPIC} in
     "OCP")
-        product="Openshift"
+        product="OpenShift"
         ;;
 esac
 
 # Get Team ID
 team_id=$( dcictl \
                --format json \
-               team-list \
-               --limit 1 \
-               --sort updated_at |
+               team-list |
            jq -r '.teams[]|.id'
 )
 if [[ -z "${team_id}" ]]; then
@@ -140,5 +138,3 @@ for version in ${versions[@]}; do
 done
 
 echo "::set-output name=dci-components::$(jq -s -c '.' ${components_file})"
-
-jq . ${components_file}
