@@ -10,15 +10,12 @@ inputs:
   dciApiSecret:
     description: "Remote CI API secret"
     required: true
+  # DCI Control Server (Optional)
   dciCsUrl:
     description: "Remote CI control server URL"
     required: true
     default: "https://api.distributed-ci.io/"
-  # Component details
-  dciTopic:
-    description: "DCI topic"
-    required: true
-    default: OCP
+  # Component details (Required)
   dciTopicVersion:
     description: "DCI topic version"
     required: true
@@ -31,6 +28,11 @@ inputs:
   componentType:
     description: "DCI component type"
     required: true
+  # Component details (Optional)
+  dciTopic:
+    description: "DCI topic"
+    required: true
+    default: OCP
   componentUrl:
     description: "DCI component URL"
     required: false
