@@ -1,0 +1,47 @@
+---
+name: dci-component
+description: "DCI Component"
+
+inputs:
+  # API Secrets
+  dciClientId:
+    description: "Remote CI client ID"
+    required: true
+  dciApiSecret:
+    description: "Remote CI API secret"
+    required: true
+  dciCsUrl:
+    description: "Remote CI control server URL"
+    required: true
+    default: "https://api.distributed-ci.io/"
+  # Component details
+  dciTopic:
+    description: "DCI topic"
+    required: true
+    default: OCP
+  dciTopicVersion:
+    description: "DCI topic version"
+    required: true
+  componentName:
+    description: "DCI component name"
+    required: true
+  componentCanonicalName:
+    description: "DCI component canonical name"
+    required: true
+  componentType:
+    description: "DCI component type"
+    required: true
+  componentUrl:
+    description: "DCI component URL"
+    required: false
+  componentData:
+    description: "DCI component data"
+    required: false
+
+outputs:
+  components:
+    description: "DCI components"
+
+runs:
+  using: "docker"
+  image: "Dockerfile"

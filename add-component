@@ -1,0 +1,144 @@
+#!/bin/bash
+
+components_file=$(mktemp)
+
+function clean_up() {
+    rm -f $components_file
+}
+
+trap clean_up EXIT
+
+VALID_DCI_TOPICS=( 
+    OCP
+)
+
+# API Secrets
+#DCI_CLIENT_ID=${INPUT_DCICLIENTID}
+#DCI_API_SECRET=${INPUT_DCIAPISECRET}
+#DCI_CS_URL=${INPUT_DCICSURL}
+#export DCI_CLIENT_ID
+#export DCI_API_SECRET
+#export DCI_CS_URL
+
+# Required Inputs
+TOPIC=${INPUT_DCITOPIC^^}
+TOPIC_VERSION=${INPUT_DCITOPICVERSION} 
+COMPONENT_NAME=${INPUT_COMPONENTNAME} 
+COMPONENT_CANONICAL_NAME=${INPUT_COMPONENTCANONICALNAME} 
+COMPONENT_TYPE=${INPUT_COMPONENTTYPE} 
+
+# Optional Inputs
+COMPONENT_URL=${INPUT_COMPONENTURL} 
+COMPONENT_DATA=${INPUT_COMPONENTDATA} 
+
+# dciTopic
+if ! grep -q "${TOPIC}" <<< "${VALID_DCI_TOPICS[@]}"; then
+    echo "Invalid Topic: ${TOPIC}"
+    echo "Valid Topics: ${VALID_DCI_TOPICS[@]}"
+    exit 1
+fi
+
+case ${TOPIC} in
+    "OCP")
+        product="Openshift"
+        ;;
+esac
+
+# Get Team ID
+team_id=$( dcictl \
+               --format json \
+               team-list \
+               --limit 1 \
+               --sort updated_at |
+           jq -r '.teams[]|.id'
+)
+if [[ -z "${team_id}" ]]; then
+    echo "Failed to get Team ID, please review your DCI Client ID and API Secret"
+    exit 1
+fi
+
+# Get Product ID
+product_id=$( dcictl \
+                  --format json \
+                  product-list \
+                  --where "name:${product}" |
+              jq -r '.products[].id'
+)
+
+# dciTopicVersion
+all_versions=( $( dcictl \
+                      --format json \
+                      topic-list \
+                      --where "status:active" \
+                      --where "product_id:${product_id}" \
+                      --where "name:OCP*" |
+                  jq -r '.topics[] | .name | sub("'${TOPIC}'-?";"")')
+)
+case $TOPIC_VERSION in
+    "all")
+        versions=${all_versions[@]} 
+        ;;
+    *)
+        versions=( ${TOPIC_VERSION//,/ } )
+        for version in ${versions[@]}; do
+            if ! grep -q "${version}" <<< "${all_versions[@]}"; then
+                echo "Invalid Topic Version: ${version}"
+                echo "Valid Topic Versions: ${all_versions[@]} or 'all'"
+                exit 1
+            fi
+        done
+        ;;
+esac
+
+# componentURL
+if [[ -n ${COMPONENT_URL} ]]; then
+    if ! grep -iqP "^https?://" <<< "${COMPONENT_URL}"; then
+        echo "Invalid URL schema, must begin with 'http(s)://': ${COMPONENT_URL}"
+        exit 1
+    fi
+    url="--url ${COMPONENT_URL}"
+fi
+
+# componentData
+if [[ -n ${COMPONENT_DATA} ]]; then
+    jq . <<< "${COMPONENT_DATA}" > /dev/null 2>&1
+    if [[ $? -ne 0 ]]; then
+        echo "Invalid JSON in dciComponentData"
+        exit 1
+    fi
+    data="--data $(jq -c . <<<${COMPONENT_DATA})"
+fi
+
+
+for version in ${versions[@]}; do
+    topic_id=$( dcictl \
+                    --format json \
+                    topic-list \
+                    --where "state:active" \
+                    --where "name:${TOPIC}-${version}" |
+                jq -r '.topics[] | .id'
+    )
+    if [[ -z ${topic_id} ]]; then
+        echo "No Topic ID was found for ${TOPIC}-${version}"
+        exit 1
+    fi
+    output=$( dcictl \
+                  --format json\
+                  component-create \
+                  --topic-id ${topic_id} \
+                  --team-id ${team_id} \
+                  --name ${COMPONENT_NAME} \
+                  --canonical_project_name "${COMPONENT_CANONICAL_NAME}" \
+                  --type ${COMPONENT_TYPE} \
+                 ${url} ${data}
+    )
+    if [[ $(jq .status_code <<< "$output") -ne "null" ]]; then
+        echo "Failed to create component for ${TOPIC}-${version}"
+        exit 1
+    fi
+    jq . <<< "$output" >> $components_file
+done
+
+echo "::set-output name=dci-components::$(jq -s -c '.' ${components_file})"
+
+jq . ${components_file}
