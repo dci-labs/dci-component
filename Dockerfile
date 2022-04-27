@@ -7,6 +7,6 @@ RUN dnf install -y \
   pip3 install dciclient && \
   dcictl --version
 
-COPY add-component .
+COPY add-component /
 
 ENTRYPOINT [ "./add-component" ]
