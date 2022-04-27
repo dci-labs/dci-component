@@ -9,4 +9,4 @@ RUN dnf install -y \
 
 COPY add-component /
 
-ENTRYPOINT [ "./add-component" ]
+ENTRYPOINT [ "/add-component" ]
