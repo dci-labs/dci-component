@@ -58,7 +58,7 @@ Creating a component on the OCP topic under its version `4.10` with name `v1.2.3
         with:
           dciClientId: ${{ secrets.DCI_CLIENT_ID }}
           dciApiSecret: ${{ secrets.DCI_API_SECRET }}
-          dciTopicVersion: 4.10
+          dciTopicVersion: "4.10"
           componentName: v1.2.3
           componentCanonicalName: "My container application"
           componentType: image
@@ -70,7 +70,7 @@ Creating a component on `all` the OCP topic versions with name `22.04` and its c
 ```YAML
     steps:
       - name: Create DCI components
-        uses: tonyskapunk/dci-component@v0.1.0
+        uses: tonyskapunk/dci-component@v0.2.0
         with:
           dciClientId: ${{ secrets.DCI_CLIENT_ID }}
           dciApiSecret: ${{ secrets.DCI_API_SECRET }}
