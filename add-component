@@ -8,8 +8,10 @@ function clean_up() {
 
 trap clean_up EXIT
 
-VALID_DCI_TOPICS=( 
-    OCP
+VALID_DCI_RELEASE_TAGS=(
+    dev
+    candidate
+    ga
 )
 
 # API Secrets
@@ -21,72 +23,27 @@ export DCI_API_SECRET
 export DCI_CS_URL
 
 # Required Inputs
-TOPIC=${INPUT_DCITOPIC^^}
-TOPIC_VERSION=${INPUT_DCITOPICVERSION} 
+TOPICS=(${INPUT_DCITOPICS})
 COMPONENT_NAME=${INPUT_COMPONENTNAME} 
-COMPONENT_CANONICAL_NAME=${INPUT_COMPONENTCANONICALNAME} 
-COMPONENT_TYPE=${INPUT_COMPONENTTYPE} 
+COMPONENT_VERSION=${INPUT_COMPONENTVERSION} 
+COMPONENT_RELEASE=${INPUT_COMPONENTRELEASE} 
 
 # Optional Inputs
+COMPONENT_TAGS=(${INPUT_COMPONENTTAGS})
 COMPONENT_URL=${INPUT_COMPONENTURL} 
 COMPONENT_DATA=${INPUT_COMPONENTDATA} 
 
-# dciTopic
-if ! grep -q "${TOPIC}" <<< "${VALID_DCI_TOPICS[@]}"; then
-    echo "Invalid Topic: ${TOPIC}"
-    echo "Valid Topics: ${VALID_DCI_TOPICS[@]}"
+# componentRelease
+if ! grep -q "${COMPONENT_RELEASE,,}" <<< "${VALID_DCI_RELEASE_TAGS[@]}"; then
+    echo "Invalid Release: ${COMPONENT_RELEASE}"
+    echo "Valid Releases: ${VALID_DCI_RELEASE_TAGS[@]}"
     exit 1
 fi
 
-case ${TOPIC} in
-    "OCP")
-        product="OpenShift"
-        ;;
-esac
-
-# Get Team ID
-team_id=$( dcictl \
-               --format json \
-               team-list |
-           jq -r '.teams[]|.id'
-)
-if [[ -z "${team_id}" ]]; then
-    echo "Failed to get Team ID, please review your DCI Client ID and API Secret"
-    exit 1
+# componentTags
+if [[ -n ${COMPONENT_TAGS} ]]; then
+    tags="--tags $(echo ${COMPONENT_TAGS[@]} | tr ' ' ',')"
 fi
-
-# Get Product ID
-product_id=$( dcictl \
-                  --format json \
-                  product-list \
-                  --where "name:${product}" |
-              jq -r '.products[].id'
-)
-
-# dciTopicVersion
-all_versions=( $( dcictl \
-                      --format json \
-                      topic-list \
-                      --where "status:active" \
-                      --where "product_id:${product_id}" \
-                      --where "name:OCP*" |
-                  jq -r '.topics[] | .name | sub("'${TOPIC}'-?";"")')
-)
-case $TOPIC_VERSION in
-    "all")
-        versions=${all_versions[@]} 
-        ;;
-    *)
-        versions=( ${TOPIC_VERSION//,/ } )
-        for version in ${versions[@]}; do
-            if ! grep -q "${version}" <<< "${all_versions[@]}"; then
-                echo "Invalid Topic Version: ${version}"
-                echo "Valid Topic Versions: ${all_versions[@]} or 'all'"
-                exit 1
-            fi
-        done
-        ;;
-esac
 
 # componentURL
 if [[ -n ${COMPONENT_URL} ]]; then
@@ -107,34 +64,21 @@ if [[ -n ${COMPONENT_DATA} ]]; then
     data="--data $(jq -c . <<<${COMPONENT_DATA})"
 fi
 
-
-for version in ${versions[@]}; do
-    topic_id=$( dcictl \
-                    --format json \
-                    topic-list \
-                    --where "state:active" \
-                    --where "name:${TOPIC}-${version}" |
-                jq -r '.topics[] | .id'
-    )
-    if [[ -z ${topic_id} ]]; then
-        echo "No Topic ID was found for ${TOPIC}-${version}"
-        exit 1
-    fi
-    output=$( dcictl \
-                  --format json\
-                  component-create \
-                  --topic-id ${topic_id} \
-                  --team-id ${team_id} \
-                  --name ${COMPONENT_NAME} \
-                  --canonical_project_name "${COMPONENT_CANONICAL_NAME}" \
-                  --type ${COMPONENT_TYPE} \
-                 ${url} ${data}
+for topic in ${TOPICS[@]}; do
+    output=$( \
+        dci-create-component \
+        --format json \
+        ${topic} \
+        "${COMPONENT_NAME}" \
+        ${COMPONENT_VERSION} \
+        ${COMPONENT_RELEASE} \
+        ${tags} ${url} ${data}
     )
     if [[ $(jq .status_code <<< "$output") -ne "null" ]]; then
-        echo "Failed to create component for ${TOPIC}-${version}"
+        echo "Failed to create component for ${COMPONENT_NAME}-${COMPONENT_VERSION}"
         exit 1
     fi
-    jq . <<< "$output" >> $components_file
+    jq . <<< "$output" >> ${components_file}
 done
 
 echo "::set-output name=components::$(jq -s -c '.' ${components_file})"

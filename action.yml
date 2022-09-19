@@ -16,23 +16,22 @@ inputs:
     required: true
     default: "https://api.distributed-ci.io/"
   # Component details (Required)
-  dciTopicVersion:
-    description: "DCI topic version"
+  dciTopics:
+    description: "List of DCI topics"
     required: true
   componentName:
     description: "DCI component name"
     required: true
-  componentCanonicalName:
-    description: "DCI component canonical name"
-    required: true
-  componentType:
-    description: "DCI component type"
+  componentVersion:
+    description: "DCI component version"
     required: true
   # Component details (Optional)
-  dciTopic:
-    description: "DCI topic"
+  componentRelease:
+    description: "DCI component release"
     required: true
-    default: OCP
+  componentTags:
+    description: "List of DCI component Tags"
+    required: false
   componentUrl:
     description: "DCI component URL"
     required: false
