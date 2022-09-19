@@ -17,7 +17,7 @@ inputs:
     default: "https://api.distributed-ci.io/"
   # Component details (Required)
   dciTopics:
-    description: "List of DCI topics"
+    description: "Comma separated list of DCI topics"
     required: true
   componentName:
     description: "DCI component name"
@@ -30,7 +30,7 @@ inputs:
     description: "DCI component release"
     required: true
   componentTags:
-    description: "List of DCI component Tags"
+    description: "Comma separated list of DCI component Tags"
     required: false
   componentUrl:
     description: "DCI component URL"

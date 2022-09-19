@@ -33,20 +33,24 @@ Some Inputs are required, while others are optional.
 
 - `dciClientId`: Remote CI client ID, this is passed as a secret.
 - `dciApiSecret`: Remote CI API secret, this is passed as a secret.
-- `dciTopics`: A list of DCI topics example:
+- `dciTopics`: A comma separated list of DCI topics example:
 
     ```yaml
     # Single topic
     dciTopics: OCP-4.12
 
     # Multiple topics
-    dciTopics:
-      - OCP-4.11
-      - OCP-4.12
+    dciTopics: 'OCP-4.11,OCP-4.12'
     
+    # Multiple topics, multi-line
+    dciTopics: '
+    OCP-4.10,
+    OCP-4.11,
+    OCP-4.12,
+    '
+
     # Other topics
-    dciTopics:
-      - RHEL-9.2
+    dciTopics: RHEL-9.2
     ```
 
 - `componentName`: DCI component name, e.g. `My Awesome Component` or `FredCo awesome operator` or `acme-component`, etc.
@@ -63,9 +67,7 @@ Some Inputs are required, while others are optional.
     componentTags: "arch:arm64"
 
     # Multiple Tags
-    dciTags:
-      - "os:linux"
-      - "arch:amd64"
+    dciTags: "os:linux,arch:amd64"
     ```
 
 - `componentUrl`: DCI component URL, requires an http(s) schema, e.g. `https://my-site.com`, `https://github.com/my-org/my-repo`
@@ -100,19 +102,17 @@ Creating a component on multiple OCP topic versions with name `my-operator` and 
         with:
           dciClientId: ${{ secrets.DCI_CLIENT_ID }}
           dciApiSecret: ${{ secrets.DCI_API_SECRET }}
-          dciTopics:
-            - OCP-4.8
-            - OCP-4.9
-            - OCP-4.10
-            - OCP-4.11
+          dciTopics: '
+          OCP-4.8,
+          OCP-4.9,
+          OCP-4.10,
+          OCP-4.11
+          '
           componentName: my-operator
           componentVersion: "22.04"
           componentRelease: ga
           componentUrl: https://github.com/myorg/my-operator
-          componentTags:
-            - "ansible-operator"
-            - "os:linux"
-            - "2022"
+          componentTags: "ansible-operator,os:linux,2022"
           componentData: {"imageURL": "quay.io/myorg/my-operator:22.04"}
 ```
 
