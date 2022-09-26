@@ -33,15 +33,43 @@ Some Inputs are required, while others are optional.
 
 - `dciClientId`: Remote CI client ID, this is passed as a secret.
 - `dciApiSecret`: Remote CI API secret, this is passed as a secret.
-- `dciTopicVersion`: DCI topic version, e.g. `4.10` or `4.11,4.10,4.9` or `all`.
-- `componentName`: DCI component name, this is usually the **version** of your component, e.g. `v1.2.3` or `22.04` or `0.1-alpha`.
-- `componentCanonicalName`: DCI component canonical name, this is usually the **name** of your component, e.g. `my operator`, `my-app`.
-- `componentType`: DCI component type, the type of component to create, e.g. `operator`, `cnf-app`, `git-repo`, `rpm`, `container-image`
+- `dciTopics`: A comma separated list of DCI topics example:
+
+    ```yaml
+    # Single topic
+    dciTopics: OCP-4.12
+
+    # Multiple topics
+    dciTopics: 'OCP-4.11,OCP-4.12'
+    
+    # Multiple topics, multi-line
+    dciTopics: '
+    OCP-4.10,
+    OCP-4.11,
+    OCP-4.12,
+    '
+
+    # Other topics
+    dciTopics: RHEL-9.2
+    ```
+
+- `componentName`: DCI component name, e.g. `My Awesome Component` or `FredCo awesome operator` or `acme-component`, etc.
+- `componentVersion`: DCI component version, the version of the component to create, e.g. `v1.2.3`, `22.10`, `9.2-rc1`, `v12.28.12-alpha`, etc.
+- `componentRelease`: DCI component release tag, must be one of the following: `dev`, `candidate` or `ga`.
 
 **Optional**:
 
-- `dciCsUrl`: Remote CI control server URL, (default: `https://api.distributed-ci.io/`)
-- `dciTopic`: DCI topic, the only supported so far is `OCP` (default: `OCP`)
+- `dciCsUrl`: Remote CI control server URL, default is `https://api.distributed-ci.io/`.
+- `componentTags`: List of DCI component Tags, for example:
+
+    ```yaml
+    # Single Tag
+    componentTags: "arch:arm64"
+
+    # Multiple Tags
+    dciTags: "os:linux,arch:amd64"
+    ```
+
 - `componentUrl`: DCI component URL, requires an http(s) schema, e.g. `https://my-site.com`, `https://github.com/my-org/my-repo`
 - `componentData`: DCI component data, a compact (one-liner) json entry, e.g. `{"foo": "bar"}`, `{"uno":null,"dos":["tres",{"sub":{"on":true,"off":false}}]}`
 
@@ -49,35 +77,60 @@ Some Inputs are required, while others are optional.
 
 Here few examples on how to use this Action in your workflow as a step
 
-Creating a component on the OCP topic under its version `4.10` with name `v1.2.3` and its canonical name `My container application` of type `image`.
+Creating component `My container application` with version `v1.2.3-alpha`, and `dev` release. The component will be created only in `OCP-4.12`.
 
 ```YAML
     steps:
       - name: Create DCI components
-        uses: tonyskapunk/dci-component@v0.1.0
+        uses: dci-labs/dci-component@v1.0.0
         with:
           dciClientId: ${{ secrets.DCI_CLIENT_ID }}
           dciApiSecret: ${{ secrets.DCI_API_SECRET }}
-          dciTopicVersion: "4.10"
-          componentName: v1.2.3
-          componentCanonicalName: "My container application"
-          componentType: image
-
+          dciTopics:
+            - "OCP-4.12"
+          componentName: "My container application"
+          componentVersion: v1.2.3
+          componentRelease: "dev"
 ```
 
-Creating a component on `all` the OCP topic versions with name `22.04` and its canonical name `my-operator` of type `operator`, with a reference to its repository `https://github.com/myorg/my-operator` and another reference to the image under: `{"imageURL": "quay.io/myorg/my-operator:22.04"}`
+Creating a component on multiple OCP topic versions with name `my-operator` and version `22.04`, with a reference to its repository `https://github.com/myorg/my-operator`, with some custom tags, and the location of the image: `{"imageURL": "quay.io/myorg/my-operator:22.04"}`
 
 ```YAML
     steps:
       - name: Create DCI components
-        uses: tonyskapunk/dci-component@v0.2.0
+        uses: dci-labs/dci-component@v1.0.0
         with:
           dciClientId: ${{ secrets.DCI_CLIENT_ID }}
           dciApiSecret: ${{ secrets.DCI_API_SECRET }}
-          dciTopicVersion: all
-          componentName: 22.04
-          componentCanonicalName: my-operator
-          componentType: operator
+          dciTopics: '
+          OCP-4.8,
+          OCP-4.9,
+          OCP-4.10,
+          OCP-4.11
+          '
+          componentName: my-operator
+          componentVersion: "22.04"
+          componentRelease: ga
           componentUrl: https://github.com/myorg/my-operator
+          componentTags: "ansible-operator,os:linux,2022"
           componentData: {"imageURL": "quay.io/myorg/my-operator:22.04"}
+```
+
+The output of the component created is stored in `components` and can be re-used like this:
+
+```YAML
+    steps:
+      - name: Create DCI components
+        uses: dci-labs/dci-component@v1.0.0
+        with:
+          dciClientId: ${{ secrets.DCI_CLIENT_ID }}
+          dciApiSecret: ${{ secrets.DCI_API_SECRET }}
+          dciTopics:
+            - "OCP-4.12"
+          componentName: "My container application"
+          componentVersion: v1.2.3
+          componentRelease: "dev"
+        id: my_cmp
+
+      - run: jq . <<<"${{ steps.my_cmp.outputs.components }}"
 ```
