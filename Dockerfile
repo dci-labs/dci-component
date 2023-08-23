@@ -1,10 +1,11 @@
 ARG VERSION=latest
 FROM registry.access.redhat.com/ubi8/ubi:${VERSION}
 
-RUN dnf install -y \
+RUN dnf -y install https://packages.distributed-ci.io/dci-release.el8.noarch.rpm && \
+  dnf install -y \
   python3 \
-  jq && \
-  pip3 install dciclient && \
+  jq \
+  python3-dciclient && \
   dcictl --version
 
 COPY add-component /
