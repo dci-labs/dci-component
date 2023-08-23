@@ -81,4 +81,4 @@ for topic in ${TOPICS[@]}; do
     jq . <<< "$output" >> ${components_file}
 done
 
-echo "::set-output name=components::$(jq -s -c '.' ${components_file})"
+echo "components=$(jq -s -c '.' ${components_file})" >> ${GITHUB_OUTPUT}

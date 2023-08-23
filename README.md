@@ -1,16 +1,20 @@
 # dci-component
 
-GitHub Action to create a [DCI]() [component]() in multiple [topics]().
+[![License](https://img.shields.io/github/license/dci-labs/dci-component)](https://github.com/dci-labs/dci-component/blob/main/LICENSE)
+[![Major Release)](https://img.shields.io/github/v/release/dci-labs/dci-component?label=major)](https://github.com/dci-labs/dci-component/releases/latest)
+[![GitHub tag (latest SemVer)](https://img.shields.io/github/v/tag/dci-labs/dci-component?label=latest)](https://github.com/dci-labs/dci-component/tags)
+
+GitHub Action to create a [DCI](https://docs.distributed-ci.io/) [component](https://docs.distributed-ci.io/#component) in multiple [topics](https://docs.distributed-ci.io/#topic).
 
 ## Usage
 
 ### Pre-requisites
 
-In order to use this Action, a [RemoteCI](https://docs.distributed-ci.io/#remote-ci) is required. Follow these steps to create one if one is not already created.
+To use this Action, a [RemoteCI](https://docs.distributed-ci.io/#remote-ci) is required. Follow these steps to create one if one is not already created.
 
 - Login into your account: [https://www.distributed-ci.io/login](https://www.distributed-ci.io/login)
 - Go to the RemoteCI section: [https://www.distributed-ci.io/remotecis](https://www.distributed-ci.io/remotecis)
-- Click on "Create a new remoteci" button
+- Click on the "Create a new remoteci" button
   - Set a name
   - Select team owner
 - Search your newly created RemoteCI
@@ -33,7 +37,7 @@ Some Inputs are required, while others are optional.
 
 - `dciClientId`: Remote CI client ID, this is passed as a secret.
 - `dciApiSecret`: Remote CI API secret, this is passed as a secret.
-- `dciTopics`: A comma separated list of DCI topics example:
+- `dciTopics`: A comma-separated list of DCI topics example:
 
     ```yaml
     # Single topic
@@ -44,9 +48,9 @@ Some Inputs are required, while others are optional.
     
     # Multiple topics, multi-line
     dciTopics: '
-    OCP-4.10,
     OCP-4.11,
     OCP-4.12,
+    OCP-4.13,
     '
 
     # Other topics
@@ -55,7 +59,7 @@ Some Inputs are required, while others are optional.
 
 - `componentName`: DCI component name, e.g. `My Awesome Component` or `FredCo awesome operator` or `acme-component`, etc.
 - `componentVersion`: DCI component version, the version of the component to create, e.g. `v1.2.3`, `22.10`, `9.2-rc1`, `v12.28.12-alpha`, etc.
-- `componentRelease`: DCI component release tag, must be one of the following: `dev`, `candidate` or `ga`.
+- `componentRelease`: DCI component release tag must be one of the following: `dev`, `candidate` or `ga`.
 
 **Optional**:
 
@@ -67,15 +71,15 @@ Some Inputs are required, while others are optional.
     componentTags: "arch:arm64"
 
     # Multiple Tags
-    dciTags: "os:linux,arch:amd64"
+    componentTags: "os:linux,arch:amd64"
     ```
 
 - `componentUrl`: DCI component URL, requires an http(s) schema, e.g. `https://my-site.com`, `https://github.com/my-org/my-repo`
-- `componentData`: DCI component data, a compact (one-liner) json entry, e.g. `{"foo": "bar"}`, `{"uno":null,"dos":["tres",{"sub":{"on":true,"off":false}}]}`
+- `componentData`: DCI component data, a compact (one-liner) JSON entry, e.g. `{"foo": "bar"}`, `{"uno":null,"dos":["tres",{"sub":{"on":true,"off":false}}]}`
 
 ### Workflow
 
-Here few examples on how to use this Action in your workflow as a step
+Here few examples of how to use this Action in your workflow as a step
 
 Creating component `My container application` with version `v1.2.3-alpha`, and `dev` release. The component will be created only in `OCP-4.12`.
 
@@ -93,12 +97,12 @@ Creating component `My container application` with version `v1.2.3-alpha`, and `
           componentRelease: "dev"
 ```
 
-Creating a component on multiple OCP topic versions with name `my-operator` and version `22.04`, with a reference to its repository `https://github.com/myorg/my-operator`, with some custom tags, and the location of the image: `{"imageURL": "quay.io/myorg/my-operator:22.04"}`
+Creating a component on multiple OCP topic versions with the name `my-operator` and version `22.04`, with a reference to its repository `https://github.com/myorg/my-operator`, with some custom tags, and the location of the image: `{"imageURL": "quay.io/myorg/my-operator:22.04"}`
 
 ```YAML
     steps:
       - name: Create DCI components
-        uses: dci-labs/dci-component@v1.0.0
+        uses: dci-labs/dci-component@v1
         with:
           dciClientId: ${{ secrets.DCI_CLIENT_ID }}
           dciApiSecret: ${{ secrets.DCI_API_SECRET }}
@@ -116,12 +120,12 @@ Creating a component on multiple OCP topic versions with name `my-operator` and 
           componentData: {"imageURL": "quay.io/myorg/my-operator:22.04"}
 ```
 
-The output of the component created is stored in `components` and can be re-used like this:
+The output of the component created is stored in `components` and can be re-used like this for a nice output in GHA:
 
 ```YAML
     steps:
       - name: Create DCI components
-        uses: dci-labs/dci-component@v1.0.0
+        uses: dci-labs/dci-component@v1
         with:
           dciClientId: ${{ secrets.DCI_CLIENT_ID }}
           dciApiSecret: ${{ secrets.DCI_API_SECRET }}
@@ -130,7 +134,20 @@ The output of the component created is stored in `components` and can be re-used
           componentName: "My container application"
           componentVersion: v1.2.3
           componentRelease: "dev"
-        id: my_cmp
+        id: dci
 
-      - run: jq . <<<"${{ steps.my_cmp.outputs.components }}"
+      - name: Results
+        run: |
+          echo "## DCI components" >> ${GITHUB_STEP_SUMMARY}
+          echo "" >> ${GITHUB_STEP_SUMMARY}
+          echo "\`\`\`JSON" >> ${GITHUB_STEP_SUMMARY}
+          <<<'${{ steps.dci.outputs.components }}' jq . >> ${GITHUB_STEP_SUMMARY}
+          echo "\`\`\`" >> ${GITHUB_STEP_SUMMARY}
+          echo "" >> ${GITHUB_STEP_SUMMARY}
 ```
+
+The Results step will take the markdown generated and render it nicely.
+
+## Changelog
+
+Please take a look at [CHANGELOG.md](./CHANGELOG.md)
