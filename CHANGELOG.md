@@ -2,6 +2,10 @@
 
 ## v1
 
+## v1.2.0
+
+- Return components already created instead of failing
+
 ## v1.1.0
 
 - Use the package for the DCI client

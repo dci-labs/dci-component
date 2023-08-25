@@ -6,6 +6,8 @@
 
 GitHub Action to create a [DCI](https://docs.distributed-ci.io/) [component](https://docs.distributed-ci.io/#component) in multiple [topics](https://docs.distributed-ci.io/#topic).
 
+When a component already exists, the component will be retrieved, it will not update it.
+
 ## Usage
 
 ### Pre-requisites
@@ -18,7 +20,7 @@ To use this Action, a [RemoteCI](https://docs.distributed-ci.io/#remote-ci) is r
   - Set a name
   - Select team owner
 - Search your newly created RemoteCI
-  - Click on the Authenticate "blue incognito button"
+  - Under the Authentication column click on credentials.yaml
   - Copy on the button "Copy to clipboard"
 - Save the content in a file
 

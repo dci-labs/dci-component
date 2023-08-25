@@ -74,7 +74,36 @@ for topic in ${TOPICS[@]}; do
         ${COMPONENT_RELEASE} \
         ${tags} ${url} ${data}
     )
-    if [[ $(jq .status_code <<< "$output") -ne "null" ]]; then
+    status_code=$(jq -r .status_code <<< "${output}")
+    # Component already exists, retrieve it
+    if [[ "${status_code}" -eq "409" ]]; then
+        topic_id=$(jq -r .message <<< "${output}" |
+            grep -oP "'topic_id': '[^,]+" |
+            cut -d "'" -f4
+        )
+        type=$(jq -r .message <<< "${output}" |
+            grep -oP "'type': '[^,]+" |
+            cut -d "'" -f4
+        )
+        name=$(jq -r .message <<< "${output}" |
+            grep -oP "'name': '[^,]+" |
+            cut -d "'" -f4
+        )
+        query="type:${type},version:${COMPONENT_VERSION},name:${name}"
+        component=$(\
+            dcictl \
+            --format json \
+            component-list \
+            --topic-id ${topic_id} \
+            --where "${query}" |
+            jq -r '.components[0]'
+        )
+        if [[ "${component}" == "null" ]]; then
+            echo "Failed to find component ${name}"
+            exit 1
+        fi
+        output='{"component": '${component}'}'
+    elif [[ "${status_code}" -ne "null" ]]; then
         echo "Failed to create component for ${COMPONENT_NAME}-${COMPONENT_VERSION}"
         exit 1
     fi
