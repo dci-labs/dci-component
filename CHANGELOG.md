@@ -2,6 +2,10 @@
 
 ## v1
 
+## v1.3.0
+
+- Add wildcard "all-*" for topics
+
 ## v1.2.0
 
 - Return components already created instead of failing
