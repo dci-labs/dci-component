@@ -39,7 +39,7 @@ Some Inputs are required, while others are optional.
 
 - `dciClientId`: Remote CI client ID, this is passed as a secret.
 - `dciApiSecret`: Remote CI API secret, this is passed as a secret.
-- `dciTopics`: A comma-separated list of DCI topics example:
+- `dciTopics`: A comma-separated list of DCI topics, or a special term `all-<TOPIC_TYPE>`for the latest (last 6) topics. Where `TOPIC_TYPE`is one of: `OCP`, `OSP` or `RHEL`.
 
     ```yaml
     # Single topic
@@ -57,6 +57,12 @@ Some Inputs are required, while others are optional.
 
     # Other topics
     dciTopics: RHEL-9.2
+
+    # All the latest versions of the OSP topic
+    dciTopics: all-osp
+
+    # All the latest versions of the OCP topic
+    dciTopics: all-OCP
     ```
 
 - `componentName`: DCI component name, e.g. `My Awesome Component` or `FredCo awesome operator` or `acme-component`, etc.
@@ -92,8 +98,7 @@ Creating component `My container application` with version `v1.2.3-alpha`, and `
         with:
           dciClientId: ${{ secrets.DCI_CLIENT_ID }}
           dciApiSecret: ${{ secrets.DCI_API_SECRET }}
-          dciTopics:
-            - "OCP-4.12"
+          dciTopics: "OCP-4.12"
           componentName: "My container application"
           componentVersion: v1.2.3
           componentRelease: "dev"
@@ -131,8 +136,7 @@ The output of the component created is stored in `components` and can be re-used
         with:
           dciClientId: ${{ secrets.DCI_CLIENT_ID }}
           dciApiSecret: ${{ secrets.DCI_API_SECRET }}
-          dciTopics:
-            - "OCP-4.12"
+          dciTopics: "OCP-4.12"
           componentName: "My container application"
           componentVersion: v1.2.3
           componentRelease: "dev"

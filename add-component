@@ -8,10 +8,50 @@ function clean_up() {
 
 trap clean_up EXIT
 
+# Get the latest (last 6) versios of a topic
+function get_topic_versions(){
+    local topic_type=${1^^}
+    declare -A products
+    products=( [OCP]=OpenShift [OSP]=OpenStack [RHEL]=RHEL )
+
+    # get product from topic
+    product=${products[${topic_type}]}
+
+    if [[ -z ${product} ]]; then
+        echo "Invalid Topic Type: ${topic_type}"
+        echo "Valid Topic Types: ${VALID_DCI_TOPIC_TYPES[*]}"
+        exit 1
+    fi
+
+    # Get Product ID
+    product_id=$( dcictl \
+                  --format json \
+                  product-list \
+                  --where "name:${product}" |
+              jq -r '.products[].id'
+    )
+
+    all_versions=( $( dcictl \
+                      --format json \
+                      topic-list \
+                      --where "status:active" \
+                      --where "product_id:${product_id}" \
+                      --where "name:${topic_type}*" |
+                  jq -r '.topics[0:6][] | .name')
+    )
+    echo ${all_versions[@]}
+}
+
 VALID_DCI_RELEASE_TAGS=(
     dev
     candidate
     ga
+)
+
+VALID_DCI_TOPIC_TYPES=(
+    OCP
+    OSP
+    RHEL
 )
 
 # API Secrets
@@ -64,6 +104,22 @@ if [[ -n ${COMPONENT_DATA} ]]; then
     data="--data $(jq -c . <<<${COMPONENT_DATA})"
 fi
 
+# dciTopicVersion
+if [[ -z "${TOPICS[*]}" ]]; then
+    echo "No topics provided"
+    exit 1
+fi
+
+# Detect topic wildcard "all-<TOPIC_TYPE>"
+if [[ ${#TOPICS[@]} -eq 1 ]] && grep -q all- <<< "${TOPICS[0]}"; then
+    old_topic=${TOPICS[0]}
+    TOPICS=( $(get_topic_versions "${TOPICS[0]#all-*}") )
+    if [[ $? -ne 0 ]]; then
+        echo "Failed to get versions for ${old_topic}"
+        exit 1
+    fi
+fi
+
 for topic in ${TOPICS[@]}; do
     output=$( \
         dci-create-component \
@@ -110,4 +166,4 @@ for topic in ${TOPICS[@]}; do
     jq . <<< "$output" >> ${components_file}
 done
 
-echo "components=$(jq -s -c '.' ${components_file})" >> ${GITHUB_OUTPUT}
+echo "components=$(jq -s -c '.' ${components_file})" >> "${GITHUB_OUTPUT}"
