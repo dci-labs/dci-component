@@ -4,7 +4,7 @@
 
 ## v1.3.0
 
-- Add wildcard "all-*" for topics
+- Add wildcard "all-<TOPIC_TYPE>" for topics
 
 ## v1.2.0
 

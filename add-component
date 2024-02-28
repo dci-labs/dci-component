@@ -110,7 +110,7 @@ if [[ -z "${TOPICS[*]}" ]]; then
     exit 1
 fi
 
-# Detect wildcard topic "all-*"
+# Detect topic wildcard "all-<TOPIC_TYPE>"
 if [[ ${#TOPICS[@]} -eq 1 ]] && grep -q all- <<< "${TOPICS[0]}"; then
     old_topic=${TOPICS[0]}
     TOPICS=( $(get_topic_versions "${TOPICS[0]#all-*}") )

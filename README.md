@@ -39,7 +39,7 @@ Some Inputs are required, while others are optional.
 
 - `dciClientId`: Remote CI client ID, this is passed as a secret.
 - `dciApiSecret`: Remote CI API secret, this is passed as a secret.
-- `dciTopics`: A comma-separated list of DCI topics example, or a wildcard for a particular topic, that uses all the latest versions of that topic.
+- `dciTopics`: A comma-separated list of DCI topics, or a special term `all-<TOPIC_TYPE>`for the latest (last 6) topics. Where `TOPIC_TYPE`is one of: `OCP`, `OSP` or `RHEL`.
 
     ```yaml
     # Single topic
