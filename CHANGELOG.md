@@ -2,7 +2,7 @@
 
 ## v1
 
-## v1.3.1
+## v1.4.0
 
 - Get last 7 versions of a topic if using "all-<TOPIC_TYPE>"
 
