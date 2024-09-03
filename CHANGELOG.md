@@ -2,6 +2,10 @@
 
 ## v1
 
+## v1.4.0
+
+- Get last 7 versions of a topic if using "all-<TOPIC_TYPE>"
+
 ## v1.3.0
 
 - Add wildcard "all-<TOPIC_TYPE>" for topics

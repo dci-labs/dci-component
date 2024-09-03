@@ -8,7 +8,7 @@ function clean_up() {
 
 trap clean_up EXIT
 
-# Get the latest (last 6) versios of a topic
+# Get the latest (last 7) versions of a topic
 function get_topic_versions(){
     local topic_type=${1^^}
     declare -A products
@@ -37,7 +37,7 @@ function get_topic_versions(){
                       --where "status:active" \
                       --where "product_id:${product_id}" \
                       --where "name:${topic_type}*" |
-                  jq -r '.topics[0:6][] | .name')
+                  jq -r '.topics[0:7][] | .name')
     )
     echo ${all_versions[@]}
 }
