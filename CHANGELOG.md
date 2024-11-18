@@ -2,6 +2,10 @@
 
 ## v1
 
+## v1.5.0
+
+- Set a limit of topics to use with the wildcard "all-<TOPIC_TYPE>" based on the product.
+
 ## v1.4.0
 
 - Get last 7 versions of a topic if using "all-<TOPIC_TYPE>"

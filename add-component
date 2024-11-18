@@ -8,14 +8,17 @@ function clean_up() {
 
 trap clean_up EXIT
 
-# Get the latest (last 7) versions of a topic
+# Get the latest versions of a topic per product
 function get_topic_versions(){
     local topic_type=${1^^}
+    declare -A limits
     declare -A products
+    limits=( [OCP]=8 [OSP]=2 [RHEL]=10 )
     products=( [OCP]=OpenShift [OSP]=OpenStack [RHEL]=RHEL )
 
-    # get product from topic
+    # get product and limit from topic
     product=${products[${topic_type}]}
+    limit=${limits[${topic_type}]}
 
     if [[ -z ${product} ]]; then
         echo "Invalid Topic Type: ${topic_type}"
@@ -37,7 +40,7 @@ function get_topic_versions(){
                       --where "status:active" \
                       --where "product_id:${product_id}" \
                       --where "name:${topic_type}*" |
-                  jq -r '.topics[0:7][] | .name')
+                  jq -r '.topics[0:'${limit}'][] | .name')
     )
     echo ${all_versions[@]}
 }
