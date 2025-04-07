@@ -13,7 +13,7 @@ function get_topic_versions(){
     local topic_type=${1^^}
     declare -A limits
     declare -A products
-    limits=( [OCP]=8 [OSP]=2 [RHEL]=10 )
+    limits=( [OCP]=9 [OSP]=2 [RHEL]=10 )
     products=( [OCP]=OpenShift [OSP]=OpenStack [RHEL]=RHEL )
 
     # get product and limit from topic
