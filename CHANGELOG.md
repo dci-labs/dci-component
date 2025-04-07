@@ -2,6 +2,12 @@
 
 ## v1
 
+## v1.6.0
+
+- Use ubi9-minimal image
+- Increase the limit for OCP topics when using all-OCP.
+- Add buildtype: nightly
+
 ## v1.5.0
 
 - Set a limit of topics to use with the wildcard "all-<TOPIC_TYPE>" based on the product.
