@@ -49,6 +49,7 @@ VALID_DCI_RELEASE_TAGS=(
     dev
     candidate
     ga
+    nightly
 )
 
 VALID_DCI_TOPIC_TYPES=(

@@ -1,8 +1,8 @@
 ARG VERSION=latest
-FROM registry.access.redhat.com/ubi8/ubi:${VERSION}
+FROM registry.access.redhat.com/ubi9/ubi-minimal:${VERSION}
 
-RUN dnf -y install https://packages.distributed-ci.io/dci-release.el8.noarch.rpm && \
-  dnf install -y \
+RUN rpm -iv https://packages.distributed-ci.io/dci-release.el9.noarch.rpm
+RUN microdnf install -y \
   python3 \
   jq \
   python3-dciclient && \

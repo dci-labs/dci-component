@@ -67,7 +67,7 @@ Some Inputs are required, while others are optional.
 
 - `componentName`: DCI component name, e.g. `My Awesome Component` or `FredCo awesome operator` or `acme-component`, etc.
 - `componentVersion`: DCI component version, the version of the component to create, e.g. `v1.2.3`, `22.10`, `9.2-rc1`, `v12.28.12-alpha`, etc.
-- `componentRelease`: DCI component release tag must be one of the following: `dev`, `candidate` or `ga`.
+- `componentRelease`: DCI component release tag must be one of the following: `nightly`, `dev`, `candidate` or `ga`.
 
 **Optional**:
 
