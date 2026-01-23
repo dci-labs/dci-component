@@ -8,21 +8,18 @@ function clean_up() {
 
 trap clean_up EXIT
 
-# Get the latest versions of a topic per product
-function get_topic_versions(){
-    local topic_type=${1^^}
-    declare -A limits
+# Get the active versions of a topic per product
+function get_active_topics(){
+    local product_type=${1^^}
     declare -A products
-    limits=( [OCP]=9 [OSP]=2 [RHEL]=10 )
     products=( [OCP]=OpenShift [OSP]=OpenStack [RHEL]=RHEL )
 
     # get product and limit from topic
-    product=${products[${topic_type}]}
-    limit=${limits[${topic_type}]}
+    product=${products[${product_type}]}
 
     if [[ -z ${product} ]]; then
-        echo "Invalid Topic Type: ${topic_type}"
-        echo "Valid Topic Types: ${VALID_DCI_TOPIC_TYPES[*]}"
+        echo "Invalid Product Type: ${product_type}"
+        echo "Valid Product Types: ${VALID_DCI_PRODUCT_TYPES[*]}"
         exit 1
     fi
 
@@ -34,15 +31,14 @@ function get_topic_versions(){
               jq -r '.products[].id'
     )
 
-    all_versions=( $( dcictl \
+    # Get all the active topics of a product
+    topics=( $( dcictl \
                       --format json \
                       topic-list \
-                      --where "status:active" \
-                      --where "product_id:${product_id}" \
-                      --where "name:${topic_type}*" |
-                  jq -r '.topics[0:'${limit}'][] | .name')
+                      --where "state:active,product_id:${product_id},name:${product_type}*" |
+                  jq -r '.topics[] | .name')
     )
-    echo ${all_versions[@]}
+    echo ${topics[@]}
 }
 
 VALID_DCI_RELEASE_TAGS=(
@@ -52,7 +48,7 @@ VALID_DCI_RELEASE_TAGS=(
     nightly
 )
 
-VALID_DCI_TOPIC_TYPES=(
+VALID_DCI_PRODUCT_TYPES=(
     OCP
     OSP
     RHEL
@@ -117,7 +113,7 @@ fi
 # Detect topic wildcard "all-<TOPIC_TYPE>"
 if [[ ${#TOPICS[@]} -eq 1 ]] && grep -q all- <<< "${TOPICS[0]}"; then
     old_topic=${TOPICS[0]}
-    TOPICS=( $(get_topic_versions "${TOPICS[0]#all-*}") )
+    TOPICS=( $(get_active_topics "${TOPICS[0]#all-*}") )
     if [[ $? -ne 0 ]]; then
         echo "Failed to get versions for ${old_topic}"
         exit 1
