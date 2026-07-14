@@ -1,9 +1,10 @@
 #!/bin/bash
+set -euo pipefail
 
 components_file=$(mktemp)
 
 function clean_up() {
-    rm -f $components_file
+    rm -f "${components_file}"
 }
 
 trap clean_up EXIT
@@ -15,9 +16,9 @@ function get_active_topics(){
     products=( [OCP]=OpenShift [OSP]=OpenStack [RHEL]=RHEL )
 
     # get product and limit from topic
-    product=${products[${product_type}]}
+    product=${products[${product_type}]:-}
 
-    if [[ -z ${product} ]]; then
+    if [[ -z "${product}" ]]; then
         echo "Invalid Product Type: ${product_type}"
         echo "Valid Product Types: ${VALID_DCI_PRODUCT_TYPES[*]}"
         exit 1
@@ -31,14 +32,25 @@ function get_active_topics(){
               jq -r '.products[].id'
     )
 
+    if [[ -z "${product_id}" ]]; then
+        echo "Product lookup failed for: ${product}"
+        exit 1
+    fi
+
     # Get all the active topics of a product
-    topics=( $( dcictl \
+    readarray -t topics < <( dcictl \
                       --format json \
                       topic-list \
                       --where "state:active,product_id:${product_id},name:${product_type}*" |
-                  jq -r '.topics[] | .name')
+                  jq -r '.topics[] | .name'
     )
-    echo ${topics[@]}
+
+    if [[ ${#topics[@]} -eq 0 ]]; then
+        echo "No active topics found for product: ${product}"
+        exit 1
+    fi
+
+    printf '%s\n' "${topics[@]}"
 }
 
 VALID_DCI_RELEASE_TAGS=(
@@ -55,53 +67,87 @@ VALID_DCI_PRODUCT_TYPES=(
 )
 
 # API Secrets
-DCI_CLIENT_ID=${INPUT_DCICLIENTID}
-DCI_API_SECRET=${INPUT_DCIAPISECRET}
-DCI_CS_URL=${INPUT_DCICSURL}
+DCI_CLIENT_ID=${INPUT_DCICLIENTID:-}
+DCI_API_SECRET=${INPUT_DCIAPISECRET:-}
+DCI_CS_URL=${INPUT_DCICSURL:-}
+
+if [[ -z "${DCI_CLIENT_ID}" || -z "${DCI_API_SECRET}" ]]; then
+    echo "DCI_CLIENT_ID and DCI_API_SECRET are required"
+    exit 1
+fi
+
+if [[ -z "${DCI_CS_URL}" ]]; then
+    DCI_CS_URL="https://api.distributed-ci.io/"
+fi
+
+# Validate DCI_CS_URL against allowed domain
+if [[ ! "${DCI_CS_URL}" =~ ^https://([a-z0-9.-]+\.)?distributed-ci\.io/?$ ]]; then
+    echo "Invalid DCI control server URL: ${DCI_CS_URL}"
+    echo "URL must match https://*.distributed-ci.io/"
+    exit 1
+fi
+
 export DCI_CLIENT_ID
 export DCI_API_SECRET
 export DCI_CS_URL
 
+[[ "${RUNNER_DEBUG:-0}" == "1" ]] && set -x
+
 # Required Inputs
-TOPICS=(${INPUT_DCITOPICS//,/ })
-COMPONENT_NAME=${INPUT_COMPONENTNAME} 
-COMPONENT_VERSION=${INPUT_COMPONENTVERSION} 
-COMPONENT_RELEASE=${INPUT_COMPONENTRELEASE} 
+IFS=',' read -ra TOPICS <<< "${INPUT_DCITOPICS:-}"
+TOPICS=("${TOPICS[@]// /}")
+COMPONENT_NAME=${INPUT_COMPONENTNAME:-}
+COMPONENT_VERSION=${INPUT_COMPONENTVERSION:-}
+COMPONENT_RELEASE=${INPUT_COMPONENTRELEASE:-}
 
-# Optional Inputs
-COMPONENT_TAGS=${INPUT_COMPONENTTAGS}
-COMPONENT_URL=${INPUT_COMPONENTURL} 
-COMPONENT_DATA=${INPUT_COMPONENTDATA} 
-
-# componentRelease
-if ! grep -q "${COMPONENT_RELEASE,,}" <<< "${VALID_DCI_RELEASE_TAGS[@]}"; then
-    echo "Invalid Release: ${COMPONENT_RELEASE}"
-    echo "Valid Releases: ${VALID_DCI_RELEASE_TAGS[@]}"
+if [[ -z "${COMPONENT_NAME}" || -z "${COMPONENT_VERSION}" || -z "${COMPONENT_RELEASE}" ]]; then
+    echo "componentName, componentVersion, and componentRelease are required"
     exit 1
 fi
 
-# componentTags
-if [[ -n ${COMPONENT_TAGS} ]]; then
-    tags="--tags  ${COMPONENT_TAGS}"
+# Optional Inputs
+COMPONENT_TAGS=${INPUT_COMPONENTTAGS:-}
+COMPONENT_URL=${INPUT_COMPONENTURL:-}
+COMPONENT_DATA=${INPUT_COMPONENTDATA:-}
+
+# componentRelease
+case "${COMPONENT_RELEASE,,}" in
+    dev|candidate|ga|nightly) ;;
+    *)
+        echo "Invalid Release: ${COMPONENT_RELEASE}"
+        echo "Valid Releases: ${VALID_DCI_RELEASE_TAGS[*]}"
+        exit 1
+        ;;
+esac
+
+# Validate componentVersion
+if [[ ! "${COMPONENT_VERSION}" =~ ^[A-Za-z0-9._:,-]+$ ]]; then
+    echo "Invalid componentVersion: ${COMPONENT_VERSION}"
+    echo "Must match: [A-Za-z0-9._:,-]+"
+    exit 1
+fi
+
+# Validate componentTags
+if [[ -n "${COMPONENT_TAGS}" ]] && [[ ! "${COMPONENT_TAGS}" =~ ^[A-Za-z0-9._:,\ -]+$ ]]; then
+    echo "Invalid componentTags: ${COMPONENT_TAGS}"
+    echo "Must match: [A-Za-z0-9._:, -]+"
+    exit 1
 fi
 
 # componentURL
-if [[ -n ${COMPONENT_URL} ]]; then
-    if ! grep -iqP "^https?://" <<< "${COMPONENT_URL}"; then
+if [[ -n "${COMPONENT_URL}" ]]; then
+    if [[ ! "${COMPONENT_URL}" =~ ^https?:// ]]; then
         echo "Invalid URL schema, must begin with 'http(s)://': ${COMPONENT_URL}"
         exit 1
     fi
-    url="--url ${COMPONENT_URL}"
 fi
 
 # componentData
-if [[ -n ${COMPONENT_DATA} ]]; then
-    jq . <<< "${COMPONENT_DATA}" > /dev/null 2>&1
-    if [[ $? -ne 0 ]]; then
+if [[ -n "${COMPONENT_DATA}" ]]; then
+    if ! jq . <<< "${COMPONENT_DATA}" > /dev/null 2>&1; then
         echo "Invalid JSON in dciComponentData"
         exit 1
     fi
-    data="--data $(jq -c . <<<${COMPONENT_DATA})"
 fi
 
 # dciTopicVersion
@@ -111,28 +157,26 @@ if [[ -z "${TOPICS[*]}" ]]; then
 fi
 
 # Detect topic wildcard "all-<TOPIC_TYPE>"
-if [[ ${#TOPICS[@]} -eq 1 ]] && grep -q all- <<< "${TOPICS[0]}"; then
-    old_topic=${TOPICS[0]}
-    TOPICS=( $(get_active_topics "${TOPICS[0]#all-*}") )
-    if [[ $? -ne 0 ]]; then
+if [[ ${#TOPICS[@]} -eq 1 ]] && [[ "${TOPICS[0]}" == all-* ]]; then
+    old_topic="${TOPICS[0]}"
+    readarray -t TOPICS < <(get_active_topics "${TOPICS[0]#all-}")
+    if [[ ${#TOPICS[@]} -eq 0 ]]; then
         echo "Failed to get versions for ${old_topic}"
         exit 1
     fi
 fi
 
-for topic in ${TOPICS[@]}; do
-    output=$( \
-        dci-create-component \
-        --format json \
-        ${topic} \
-        "${COMPONENT_NAME}" \
-        ${COMPONENT_VERSION} \
-        ${COMPONENT_RELEASE} \
-        ${tags} ${url} ${data}
-    )
+for topic in "${TOPICS[@]}"; do
+    args=(--format json "${topic}" "${COMPONENT_NAME}" "${COMPONENT_VERSION}" "${COMPONENT_RELEASE}")
+    [[ -n "${COMPONENT_TAGS}" ]] && args+=(--tags "${COMPONENT_TAGS}")
+    [[ -n "${COMPONENT_URL}" ]] && args+=(--url "${COMPONENT_URL}")
+    [[ -n "${COMPONENT_DATA}" ]] && args+=(--data "$(jq -c . <<< "${COMPONENT_DATA}")")
+
+    output=$(dci-create-component "${args[@]}")
+
     status_code=$(jq -r .status_code <<< "${output}")
     # Component already exists, retrieve it
-    if [[ "${status_code}" -eq "409" ]]; then
+    if [[ "${status_code}" == "409" ]]; then
         topic_id=$(jq -r .message <<< "${output}" |
             grep -oP "'topic_id': '[^,]+" |
             cut -d "'" -f4
@@ -150,7 +194,7 @@ for topic in ${TOPICS[@]}; do
             dcictl \
             --format json \
             component-list \
-            --topic-id ${topic_id} \
+            --topic-id "${topic_id}" \
             --where "${query}" |
             jq -r '.components[0]'
         )
@@ -158,12 +202,12 @@ for topic in ${TOPICS[@]}; do
             echo "Failed to find component ${name}"
             exit 1
         fi
-        output='{"component": '${component}'}'
-    elif [[ "${status_code}" -ne "null" ]]; then
+        output='{"component": '"${component}"'}'
+    elif [[ "${status_code}" != "null" && -n "${status_code}" ]]; then
         echo "Failed to create component for ${COMPONENT_NAME}-${COMPONENT_VERSION}"
         exit 1
     fi
-    jq . <<< "$output" >> ${components_file}
+    jq 'del(.component.jobs)' <<< "${output}" >> "${components_file}"
 done
 
-echo "components=$(jq -s -c '.' ${components_file})" >> "${GITHUB_OUTPUT}"
+echo "components=$(jq -s -c '.' "${components_file}")" >> "${GITHUB_OUTPUT}"
